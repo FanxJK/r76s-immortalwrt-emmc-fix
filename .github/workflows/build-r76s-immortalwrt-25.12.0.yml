@@ -52,15 +52,9 @@ jobs:
           cat > package/boot/uboot-rockchip/patches/109-rk3576-uboot-emmc-stability-fix.patch <<'PATCH'
           --- a/arch/arm/dts/rk3576-generic.dts
           +++ b/arch/arm/dts/rk3576-generic.dts
-          @@ -25,7 +25,7 @@
-           &sdhci {
-            	bus-width = <8>;
-            	cap-mmc-highspeed;
+          @@ -28 +28 @@
           -	mmc-hs200-1_8v;
           +	max-frequency = <52000000>;
-            	no-sd;
-            	no-sdio;
-            	non-removable;
           PATCH
           test -f package/boot/uboot-rockchip/patches/109-rk3576-uboot-emmc-stability-fix.patch
           grep -n 'max-frequency = <52000000>' package/boot/uboot-rockchip/patches/109-rk3576-uboot-emmc-stability-fix.patch
@@ -90,17 +84,26 @@ jobs:
           make defconfig
           grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_friendlyarm_nanopi-r76s|CONFIG_PACKAGE_luci' .config || true
 
+      - name: Cache OpenWrt build toolchain
+        uses: stupidloud/cachewrtbuild@main
+        with:
+          ccache: true
+          toolchain: true
+          skip: true
+          prefix: openwrt
+          mixkey: immortalwrt-25.12.0-rockchip-armv8-r76s
+
       - name: Download sources
         working-directory: openwrt
         run: |
           set -euxo pipefail
-          make download -j$(nproc) V=s
+          make download -j$(nproc)
 
       - name: Build firmware
         working-directory: openwrt
         run: |
           set -euxo pipefail
-          make -j$(nproc) V=s || make -j1 V=s
+          make -j$(nproc) || make -j1 V=s
 
       - name: Collect artifacts
         if: always()
