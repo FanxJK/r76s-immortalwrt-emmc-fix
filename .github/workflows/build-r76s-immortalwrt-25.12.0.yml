@@ -2,15 +2,6 @@ name: Build ImmortalWrt 25.12.0 NanoPi R76S eMMC-fix
 
 on:
   workflow_dispatch:
-    inputs:
-      config_mode:
-        description: "Build config: minimal is faster; official uses upstream config.buildinfo and is slower"
-        required: true
-        default: "minimal"
-        type: choice
-        options:
-          - minimal
-          - official
 
 jobs:
   build:
@@ -66,23 +57,27 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Configure build
+      - name: Configure R76S-only build
         working-directory: openwrt
         run: |
           set -euxo pipefail
-          if [ "${{ github.event.inputs.config_mode }}" = "official" ]; then
-            curl -fsSL https://downloads.immortalwrt.org/releases/25.12.0/targets/rockchip/armv8/config.buildinfo -o .config
-          else
-            cat > .config <<'EOF'
+          cat > .config <<'EOF'
           CONFIG_TARGET_rockchip=y
           CONFIG_TARGET_rockchip_armv8=y
           CONFIG_TARGET_rockchip_armv8_DEVICE_friendlyarm_nanopi-r76s=y
+          # CONFIG_TARGET_MULTI_PROFILE is not set
+          # CONFIG_TARGET_ALL_PROFILES is not set
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-ssl=y
           EOF
-          fi
           make defconfig
-          grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_friendlyarm_nanopi-r76s|CONFIG_PACKAGE_luci' .config || true
+          grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_rockchip_armv8_DEVICE_|CONFIG_TARGET_MULTI_PROFILE|CONFIG_TARGET_ALL_PROFILES|CONFIG_PACKAGE_luci' .config || true
+          other_profiles=$(grep -E '^CONFIG_TARGET_rockchip_armv8_DEVICE_.*=y' .config | grep -v 'friendlyarm_nanopi-r76s' || true)
+          if [ -n "$other_profiles" ]; then
+            echo "Unexpected non-R76S device profiles enabled:"
+            echo "$other_profiles"
+            exit 1
+          fi
 
       - name: Cache OpenWrt build toolchain
         uses: stupidloud/cachewrtbuild@main
@@ -120,7 +115,7 @@ jobs:
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: immortalwrt-25.12.0-r76s-emmc-fix-${{ github.event.inputs.config_mode }}
+          name: immortalwrt-25.12.0-r76s-emmc-fix
           path: artifact/
           if-no-files-found: error
           retention-days: 14
