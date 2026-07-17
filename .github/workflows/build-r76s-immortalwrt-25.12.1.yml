@@ -1,7 +1,20 @@
-name: Build ImmortalWrt 25.12.0 NanoPi R76S eMMC-fix
+name: Build ImmortalWrt 25.12.1 NanoPi R76S eMMC-fix
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: immortalwrt-25.12.1-r76s-emmc-fix
+  cancel-in-progress: false
+
+env:
+  IMMORTALWRT_VERSION: "25.12.1"
+  ARTIFACT_NAME: immortalwrt-25.12.1-r76s-emmc-fix
+  RELEASE_TAG: immortalwrt-25.12.1-r76s-emmc-fix-v1.0
+  RELEASE_TITLE: ImmortalWrt 25.12.1 NanoPi R76S eMMC fix v1.0
 
 jobs:
   build:
@@ -27,13 +40,15 @@ jobs:
             build-essential clang flex bison g++ gawk gcc-multilib g++-multilib \
             gettext git libncurses5-dev libssl-dev python3-distutils python3-setuptools \
             python3-pyelftools python3-venv \
-            rsync swig unzip zlib1g-dev file wget curl ccache time jq \
+            rsync swig unzip zip zlib1g-dev file wget curl ccache time jq \
             libelf-dev device-tree-compiler
 
-      - name: Clone ImmortalWrt v25.12.0
+      - name: Clone ImmortalWrt v25.12.1
         run: |
           set -euxo pipefail
-          git clone --depth 1 --branch v25.12.0 https://github.com/immortalwrt/immortalwrt.git openwrt
+          git clone --depth 1 --branch "v${IMMORTALWRT_VERSION}" \
+            https://github.com/immortalwrt/immortalwrt.git openwrt
+          test "$(git -C openwrt describe --tags --exact-match)" = "v${IMMORTALWRT_VERSION}"
           git -C openwrt log -1 --oneline
 
       - name: Apply RK3576 U-Boot eMMC HS200 workaround patch
@@ -86,19 +101,19 @@ jobs:
           toolchain: true
           skip: true
           prefix: openwrt
-          mixkey: immortalwrt-25.12.0-rockchip-armv8-r76s
+          mixkey: immortalwrt-25.12.1-rockchip-armv8-r76s
 
       - name: Download sources
         working-directory: openwrt
         run: |
           set -euxo pipefail
-          make download -j$(nproc)
+          make download -j"$(nproc)"
 
       - name: Build firmware
         working-directory: openwrt
         run: |
           set -euxo pipefail
-          make -j$(nproc) || make -j1 V=s
+          make -j"$(nproc)" || make -j1 V=s
 
       - name: Collect artifacts
         if: always()
@@ -112,10 +127,59 @@ jobs:
           cp -av openwrt/package/boot/uboot-rockchip/patches/109-rk3576-uboot-emmc-stability-fix.patch artifact/ || true
           find artifact -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
 
+      - name: Prepare release archive
+        run: |
+          set -euo pipefail
+          archive="artifact/${ARTIFACT_NAME}.zip"
+          mapfile -d '' -t release_files < <(find artifact -maxdepth 1 -type f -print0 | sort -z)
+          if [ "${#release_files[@]}" -eq 0 ]; then
+            echo "No release files were produced."
+            exit 1
+          fi
+          zip -9 -j "$archive" "${release_files[@]}"
+          test -s "$archive"
+
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: immortalwrt-25.12.0-r76s-emmc-fix
+          name: ${{ env.ARTIFACT_NAME }}
           path: artifact/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -d '' -t release_assets < <(find artifact -maxdepth 1 -type f -print0 | sort -z)
+          if [ "${#release_assets[@]}" -eq 0 ]; then
+            echo "No release assets were produced."
+            exit 1
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TITLE" \
+              --notes-file RELEASE_NOTES.md
+            gh release upload "$RELEASE_TAG" "${release_assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" "${release_assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TITLE" \
+              --notes-file RELEASE_NOTES.md \
+              --target "$GITHUB_SHA"
+          fi
+
+          release_url="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url)"
+          {
+            echo "## Release published"
+            echo
+            echo "[$RELEASE_TAG]($release_url)"
+            echo
+            echo "### Assets"
+            printf -- '- `%s`\n' "${release_assets[@]##*/}"
+          } >> "$GITHUB_STEP_SUMMARY"
