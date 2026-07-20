@@ -8,6 +8,16 @@ Automated ImmortalWrt firmware build for the FriendlyElec NanoPi R76S.
 - Web interface: LuCI with HTTPS
 - Build system: GitHub Actions
 
+## Included applications
+
+- luci-app-docker
+- docker-compose
+- luci-app-zerotier
+- luci-app-cloudflared
+- easytier and luci-app-easytier
+
+Simplified Chinese LuCI translation packages are included for the base UI and all four LuCI applications. EasyTier is fetched from `EasyTier/luci-app-easytier` with the requested shallow, single-branch clone; its exact source commit is recorded in `easytier-source-revision.txt`.
+
 ## RK3576 eMMC stability workaround
 
 The U-Boot device tree is patched as follows:
@@ -22,6 +32,6 @@ https://github.com/openwrt/openwrt/pull/23520
 
 ## Assets
 
-The release contains the generated R76S firmware images, build metadata, patch file, checksums produced by ImmortalWrt, and a ZIP archive of the top-level build outputs.
+The release contains the generated R76S firmware images, build metadata, EasyTier source revision, patch file, checksums produced by ImmortalWrt, and a ZIP archive of the top-level build outputs.
 
 This is an automated build. Back up the current system and keep a recovery method available before flashing.

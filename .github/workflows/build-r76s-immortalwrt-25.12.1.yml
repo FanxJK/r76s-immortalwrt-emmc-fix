@@ -13,8 +13,8 @@ concurrency:
 env:
   IMMORTALWRT_VERSION: "25.12.1"
   ARTIFACT_NAME: immortalwrt-25.12.1-r76s-emmc-fix
-  RELEASE_TAG: immortalwrt-25.12.1-r76s-emmc-fix-v1.0
-  RELEASE_TITLE: ImmortalWrt 25.12.1 NanoPi R76S eMMC fix v1.0
+  RELEASE_TAG: immortalwrt-25.12.1-r76s-emmc-fix-v1.1
+  RELEASE_TITLE: ImmortalWrt 25.12.1 NanoPi R76S eMMC fix v1.1
 
 jobs:
   build:
@@ -72,6 +72,18 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: Add EasyTier packages
+        working-directory: openwrt
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/EasyTier/luci-app-easytier.git \
+            --depth=1 --single-branch package/luci-app-easytier
+          test -f package/luci-app-easytier/easytier/Makefile
+          test -f package/luci-app-easytier/luci-app-easytier/Makefile
+          test -s package/luci-app-easytier/luci-app-easytier/po/zh_Hans/easytier.po
+          git -C package/luci-app-easytier rev-parse HEAD | tee easytier-source-revision.txt
+          git -C package/luci-app-easytier log -1 --oneline
+
       - name: Configure R76S-only build
         working-directory: openwrt
         run: |
@@ -84,15 +96,45 @@ jobs:
           # CONFIG_TARGET_ALL_PROFILES is not set
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-ssl=y
+          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+          CONFIG_PACKAGE_luci-app-docker=y
+          CONFIG_PACKAGE_luci-i18n-docker-zh-cn=y
+          CONFIG_PACKAGE_docker-compose=y
+          CONFIG_PACKAGE_luci-app-zerotier=y
+          CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
+          CONFIG_PACKAGE_luci-app-cloudflared=y
+          CONFIG_PACKAGE_luci-i18n-cloudflared-zh-cn=y
+          CONFIG_PACKAGE_easytier=y
+          CONFIG_PACKAGE_luci-app-easytier=y
+          CONFIG_PACKAGE_luci-i18n-easytier-zh-cn=y
           EOF
           make defconfig
-          grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_rockchip_armv8_DEVICE_|CONFIG_TARGET_MULTI_PROFILE|CONFIG_TARGET_ALL_PROFILES|CONFIG_PACKAGE_luci' .config || true
+          grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_rockchip_armv8_DEVICE_|CONFIG_TARGET_MULTI_PROFILE|CONFIG_TARGET_ALL_PROFILES|CONFIG_PACKAGE_(luci|docker-compose|easytier)' .config || true
           other_profiles=$(grep -E '^CONFIG_TARGET_rockchip_armv8_DEVICE_.*=y' .config | grep -v 'friendlyarm_nanopi-r76s' || true)
           if [ -n "$other_profiles" ]; then
             echo "Unexpected non-R76S device profiles enabled:"
             echo "$other_profiles"
             exit 1
           fi
+          required_packages=(
+            luci-i18n-base-zh-cn
+            luci-app-docker
+            luci-i18n-docker-zh-cn
+            docker-compose
+            luci-app-zerotier
+            luci-i18n-zerotier-zh-cn
+            luci-app-cloudflared
+            luci-i18n-cloudflared-zh-cn
+            easytier
+            luci-app-easytier
+            luci-i18n-easytier-zh-cn
+          )
+          for package in "${required_packages[@]}"; do
+            grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
+              echo "Required package is not enabled: ${package}"
+              exit 1
+            }
+          done
 
       - name: Cache OpenWrt build toolchain
         uses: stupidloud/cachewrtbuild@main
@@ -101,7 +143,7 @@ jobs:
           toolchain: true
           skip: true
           prefix: openwrt
-          mixkey: immortalwrt-25.12.1-rockchip-armv8-r76s
+          mixkey: immortalwrt-25.12.1-rockchip-armv8-r76s-v1.1
 
       - name: Download sources
         working-directory: openwrt
@@ -125,6 +167,7 @@ jobs:
           fi
           cp -av openwrt/.config artifact/build.config || true
           cp -av openwrt/package/boot/uboot-rockchip/patches/109-rk3576-uboot-emmc-stability-fix.patch artifact/ || true
+          cp -av openwrt/easytier-source-revision.txt artifact/ || true
           find artifact -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
 
       - name: Prepare release archive
