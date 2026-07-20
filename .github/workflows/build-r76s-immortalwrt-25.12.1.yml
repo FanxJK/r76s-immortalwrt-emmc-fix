@@ -92,6 +92,7 @@ jobs:
           CONFIG_TARGET_rockchip=y
           CONFIG_TARGET_rockchip_armv8=y
           CONFIG_TARGET_rockchip_armv8_DEVICE_friendlyarm_nanopi-r76s=y
+          CONFIG_TARGET_ROOTFS_PARTSIZE=512
           # CONFIG_TARGET_MULTI_PROFILE is not set
           # CONFIG_TARGET_ALL_PROFILES is not set
           CONFIG_PACKAGE_luci=y
@@ -109,7 +110,11 @@ jobs:
           CONFIG_PACKAGE_luci-i18n-easytier-zh-cn=y
           EOF
           make defconfig
-          grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_rockchip_armv8_DEVICE_|CONFIG_TARGET_MULTI_PROFILE|CONFIG_TARGET_ALL_PROFILES|CONFIG_PACKAGE_(luci|docker-compose|easytier)' .config || true
+          grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_rockchip_armv8_DEVICE_|CONFIG_TARGET_ROOTFS_PARTSIZE|CONFIG_TARGET_MULTI_PROFILE|CONFIG_TARGET_ALL_PROFILES|CONFIG_PACKAGE_(luci|docker-compose|easytier)' .config || true
+          grep -qx 'CONFIG_TARGET_ROOTFS_PARTSIZE=512' .config || {
+            echo "Unexpected rootfs partition size; 512 MiB is required for the selected packages."
+            exit 1
+          }
           other_profiles=$(grep -E '^CONFIG_TARGET_rockchip_armv8_DEVICE_.*=y' .config | grep -v 'friendlyarm_nanopi-r76s' || true)
           if [ -n "$other_profiles" ]; then
             echo "Unexpected non-R76S device profiles enabled:"

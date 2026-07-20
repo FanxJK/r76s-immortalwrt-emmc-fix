@@ -5,6 +5,7 @@ Automated ImmortalWrt firmware build for the FriendlyElec NanoPi R76S.
 - Build base: ImmortalWrt v25.12.1
 - Target: rockchip/armv8
 - Device profile: friendlyarm_nanopi-r76s only
+- Root filesystem partition: 512 MiB
 - Web interface: LuCI with HTTPS
 - Build system: GitHub Actions
 

@@ -7,6 +7,7 @@ Build ImmortalWrt **25.12.1** for the FriendlyElec NanoPi R76S with an RK3576 U-
 - Source: [ImmortalWrt v25.12.1](https://github.com/immortalwrt/immortalwrt/tree/v25.12.1)
 - Target: `rockchip/armv8`
 - Device: `friendlyarm_nanopi-r76s` only
+- Root filesystem partition: 512 MiB
 - Web UI: LuCI with HTTPS
 - CI: [Build ImmortalWrt 25.12.1 NanoPi R76S eMMC-fix](../../actions/workflows/build-r76s-immortalwrt-25.12.1.yml)
 - Release: [immortalwrt-25.12.1-r76s-emmc-fix-v1.1](../../releases/tag/immortalwrt-25.12.1-r76s-emmc-fix-v1.1)
