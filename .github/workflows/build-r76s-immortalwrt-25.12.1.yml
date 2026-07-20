@@ -13,8 +13,8 @@ concurrency:
 env:
   IMMORTALWRT_VERSION: "25.12.1"
   ARTIFACT_NAME: immortalwrt-25.12.1-r76s-emmc-fix
-  RELEASE_TAG: immortalwrt-25.12.1-r76s-emmc-fix-v1.1
-  RELEASE_TITLE: ImmortalWrt 25.12.1 NanoPi R76S eMMC fix v1.1
+  RELEASE_TAG: immortalwrt-25.12.1-r76s-emmc-fix-v1.2
+  RELEASE_TITLE: ImmortalWrt 25.12.1 NanoPi R76S eMMC fix v1.2
 
 jobs:
   build:
@@ -98,9 +98,8 @@ jobs:
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-ssl=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          CONFIG_PACKAGE_luci-app-docker=y
-          CONFIG_PACKAGE_luci-i18n-docker-zh-cn=y
-          CONFIG_PACKAGE_docker-compose=y
+          CONFIG_PACKAGE_luci-app-dockerman=y
+          CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn=y
           CONFIG_PACKAGE_luci-app-zerotier=y
           CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
           CONFIG_PACKAGE_luci-app-cloudflared=y
@@ -108,6 +107,11 @@ jobs:
           CONFIG_PACKAGE_easytier=y
           CONFIG_PACKAGE_luci-app-easytier=y
           CONFIG_PACKAGE_luci-i18n-easytier-zh-cn=y
+          CONFIG_PACKAGE_luci-app-diskman=y
+          CONFIG_PACKAGE_luci-i18n-diskman-zh-cn=y
+          CONFIG_PACKAGE_luci-theme-argon=y
+          CONFIG_PACKAGE_luci-app-argon-config=y
+          CONFIG_PACKAGE_luci-i18n-argon-config-zh-cn=y
           EOF
           make defconfig
           grep -E 'CONFIG_TARGET_rockchip|CONFIG_TARGET_rockchip_armv8_DEVICE_|CONFIG_TARGET_ROOTFS_PARTSIZE|CONFIG_TARGET_MULTI_PROFILE|CONFIG_TARGET_ALL_PROFILES|CONFIG_PACKAGE_(luci|docker-compose|easytier)' .config || true
@@ -123,9 +127,8 @@ jobs:
           fi
           required_packages=(
             luci-i18n-base-zh-cn
-            luci-app-docker
-            luci-i18n-docker-zh-cn
-            docker-compose
+            luci-app-dockerman
+            luci-i18n-dockerman-zh-cn
             luci-app-zerotier
             luci-i18n-zerotier-zh-cn
             luci-app-cloudflared
@@ -133,6 +136,11 @@ jobs:
             easytier
             luci-app-easytier
             luci-i18n-easytier-zh-cn
+            luci-app-diskman
+            luci-i18n-diskman-zh-cn
+            luci-theme-argon
+            luci-app-argon-config
+            luci-i18n-argon-config-zh-cn
           )
           for package in "${required_packages[@]}"; do
             grep -qx "CONFIG_PACKAGE_${package}=y" .config || {
@@ -148,7 +156,7 @@ jobs:
           toolchain: true
           skip: true
           prefix: openwrt
-          mixkey: immortalwrt-25.12.1-rockchip-armv8-r76s-v1.1
+          mixkey: immortalwrt-25.12.1-rockchip-armv8-r76s-v1.2
 
       - name: Download sources
         working-directory: openwrt

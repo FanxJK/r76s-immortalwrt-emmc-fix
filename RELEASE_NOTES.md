@@ -11,13 +11,14 @@ Automated ImmortalWrt firmware build for the FriendlyElec NanoPi R76S.
 
 ## Included applications
 
-- luci-app-docker
-- docker-compose
+- luci-app-dockerman (`docker-compose` is included automatically by the upstream package dependency)
 - luci-app-zerotier
 - luci-app-cloudflared
 - easytier and luci-app-easytier
+- luci-app-diskman
+- luci-theme-argon and luci-app-argon-config
 
-Simplified Chinese LuCI translation packages are included for the base UI and all four LuCI applications. EasyTier is fetched from `EasyTier/luci-app-easytier` with the requested shallow, single-branch clone; its exact source commit is recorded in `easytier-source-revision.txt`.
+Simplified Chinese LuCI translation packages are included for the base UI and every application that ships a `zh_Hans` catalog, including DiskMan and Argon Config. EasyTier is fetched from `EasyTier/luci-app-easytier` with the requested shallow, single-branch clone; its exact source commit is recorded in `easytier-source-revision.txt`.
 
 ## RK3576 eMMC stability workaround
 
